@@ -174,6 +174,7 @@ if __name__ == '__main__':
             samples = []
             nmse = []
             bs = []
+            computation_time = []
             banned_indices = get_banned_indices_from_qs(full_qs, q) # Full array of q = normal q-SFT
             signal_params = {
                     "n": n,
@@ -201,7 +202,9 @@ if __name__ == '__main__':
 
                 # Run q-SFT and compute NMSE
                 helper = SyntheticHelper(signal_args=signal_params, methods=methods, subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir, subsampling=True)
+                start_time = time.time()
                 result = helper.compute_model('gfast', gfast_args, report=True, verbosity=0)
+                end_time = time.time()
                 gwht = result.get("gwht")
                 signal_w_diff = signal_w.copy()
                 for key in gwht.keys():
@@ -210,6 +213,7 @@ if __name__ == '__main__':
                 nmse.append(nmse_val)        
                 samples.append(result['n_samples'])
                 bs.append(b1)
+                computation_time.append(end_time - start_time)
                 # nmse_val = helper.test_model('gfast', beta=result['gwht'])
                 # if isinstance(nmse_val, tuple):
                 #     nmse_val = nmse_val[0]
@@ -228,6 +232,7 @@ if __name__ == '__main__':
                 'NMSE': nmse,
                 'b': bs,
                 'N': str(N),
+                'Computational Time (s)': computation_time,
             })
 
 
@@ -241,6 +246,7 @@ if __name__ == '__main__':
                 samples = []
                 nmse = []
                 bs = []
+                computation_time = []
                 differences = [abs(calculate_samples(qs, n//b1, b1, 1) - max_samples) for b1 in range(b, n)]
                 nearest_b = np.argmin(differences) + b
                 N = np.prod(qs)
@@ -279,9 +285,12 @@ if __name__ == '__main__':
 
                         # Run GFast and compute NMSE
                         helper = SyntheticHelper(signal_args=signal_params, methods=methods, subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir, subsampling=True)
+                        start_time = time.time()
                         result = helper.compute_model('gfast', gfast_args, report=True, verbosity=0)
+                        end_time = time.time()
                         samples.append(result['n_samples'])
                         bs.append(b1)
+                        computation_time.append(end_time - start_time)
                         signal_w_perm = dict(zip(list(map(tuple, perm_locq.T)), strengths))
                         gwht = result.get("gwht")
                         signal_w_diff = signal_w_perm.copy()
@@ -347,6 +356,7 @@ if __name__ == '__main__':
                     'NMSE': nmse,
                     'b': bs,
                     'N': str(N),
+                    'Computational Time (s)': computation_time,
                 })
                 
     df = pd.DataFrame(data)

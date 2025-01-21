@@ -499,3 +499,61 @@ def process_stdout(captured_output):
     # else:
     #     return ValueError(f"Error: {result.stderr.strip()}")
     # return nmse_value
+
+
+def test_nmse(test_set, y, gwht, q, n, exp_dir, banned_indices={}):
+    if len(gwht.keys()) > 0:
+        batch_size = 10000
+        beta_keys = list(gwht.keys())
+        beta_values = list(gwht.values())
+        y_hat = []
+        test_set = test_set.T
+
+        for i in range(0, test_set.shape[0], batch_size):
+            sample_batch = test_set[i:i + batch_size, :]
+            H = np.empty((np.shape(sample_batch)[0], np.shape(beta_keys)[0]), dtype=complex)
+            for i, k in enumerate(np.array(beta_keys)):
+                signature = get_signature(q, n, sample_batch, k, banned_indices=banned_indices)
+                H[:, i] = signature.T
+            y_hat.append(H @ np.array(beta_values))
+        y_hat = np.concatenate(y_hat)
+
+        # Subtract sample mean from new test set
+        mean = np.load(f'{exp_dir}/train/samples/train_mean.npy')
+        y = y - mean
+
+        nmse = np.linalg.norm(y_hat - y) ** 2 / np.linalg.norm(y) ** 2
+        return nmse
+
+
+    
+    # if len(beta.keys()) > 0:
+    #         test_signal = self.test_signal.signal_t
+    #         # print("Test signal", test_signal)
+    #         qs = get_qs(self.q, self.n, banned_indices=self.test_signal.banned_indices)
+    #         (sample_idx_dec, samples) = list(test_signal.keys()), list(test_signal.values())
+    #         # print("SAMPLES/QS", qs, samples)
+    #         batch_size = 10000
+    #         beta_keys = list(beta.keys())
+    #         beta_values = list(beta.values())
+    #         y_hat = []
+
+    #         for i in range(0, len(sample_idx_dec), batch_size):
+    #             sample_idx_dec_batch = sample_idx_dec[i:i + batch_size]
+    #             sample_idx_batch = np.array([qary_vector_banned(x, qs) for x in sample_idx_dec_batch])
+    #             H = np.empty((np.shape(sample_idx_batch)[0], np.shape(beta_keys)[0]), dtype=complex)
+    #             for i, k in enumerate(np.array(beta_keys)):
+    #                 signature = get_signature(self.q, self.n, sample_idx_batch, k, banned_indices=self.test_signal.banned_indices)
+    #                 H[:, i] = signature.T
+    #             y_hat.append(H @ np.array(beta_values))
+    #         y_hat = np.concatenate(y_hat)
+    #         nmse = np.linalg.norm(y_hat - samples) ** 2 / np.linalg.norm(samples) ** 2
+    #         r2 = r2_score(np.real(y_hat), np.real(samples))
+    #         # print(f"NMSE: {nmse}, R2: {r2}")
+    #         import matplotlib.pyplot as plt
+    #         plt.figure()
+    #         plt.plot(np.real(y_hat), np.real(samples))
+    #         plt.savefig('/usr/scratch/dtsui/FinalizedCodes/gfast/gfp_results/q20_n12_nso_0.012/test.png')
+    #         return nmse, r2
+    #     else:
+    #         return 1, -1

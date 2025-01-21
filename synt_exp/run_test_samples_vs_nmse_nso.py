@@ -86,7 +86,6 @@ if __name__ == '__main__':
     b = args.b[0]
     noise_sd = np.sqrt((args.sparsity * args.a**2) / (10**(args.snr / 10)))
     print(noise_sd)
-    # noise_sd = [1, 10]
     a_min = args.a
     a_max = args.a
     t = n
@@ -179,6 +178,7 @@ if __name__ == '__main__':
             bs = []
             delays = []
             noises = []
+            computation_time = []
             banned_indices = get_banned_indices_from_qs(full_qs, q) # Full array of q = normal q-SFT
             signal_params = {
                     "n": n,
@@ -209,7 +209,9 @@ if __name__ == '__main__':
 
                         # Run q-SFT and compute NMSE
                         helper = SyntheticHelper(signal_args=signal_params, methods=methods, subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir, subsampling=True)
+                        start_time = time.time()
                         result = helper.compute_model('gfast', gfast_args, report=True, verbosity=0)
+                        end_time = time.time()
                         gwht = result.get("gwht")
                         signal_w_diff = signal_w.copy()
                         for key in gwht.keys():
@@ -219,6 +221,7 @@ if __name__ == '__main__':
                         bs.append(b1)      
                         samples.append(result['n_samples'])
                         delays.append(repeat)
+                        computation_time.append(end_time - start_time)
                         # nmse_val = helper.test_model('gfast', beta=result['gwht'])
                         # if isinstance(nmse_val, tuple):
                         #     nmse_val = nmse_val[0]
@@ -237,7 +240,8 @@ if __name__ == '__main__':
                 'NMSE': nmse,
                 'N': str(N),
                 'b': bs,
-                'delays': delays
+                'delays': delays,
+                'Computational Time (s)': computation_time,
             })
 
 
@@ -251,6 +255,7 @@ if __name__ == '__main__':
                 nmse = []
                 bs = []
                 noises = []
+                computation_time = []
                 differences = [abs(calculate_samples(qs, n//b1, b1, 1) - max_samples) for b1 in range(b, n)]
                 nearest_b = np.argmin(differences) + b
                 N = np.prod(qs)
@@ -277,7 +282,9 @@ if __name__ == '__main__':
 
                         # Run q-SFT and compute NMSE
                         helper = SyntheticHelper(signal_args=signal_params, methods=methods, subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir, subsampling=True)
+                        start_time = time.time()
                         result = helper.compute_model('gfast', gfast_args, report=True, verbosity=0)
+                        end_time = time.time()
                         gwht = result.get("gwht")
                         signal_w_diff = signal_w.copy()
                         for key in gwht.keys():
@@ -287,6 +294,7 @@ if __name__ == '__main__':
                         bs.append(b1)   
                         samples.append(result['n_samples'])
                         delays.append(repeat)
+                        computation_time.append(end_time - start_time)
                         # nmse_val = helper.test_model('gfast', beta=result['gwht'])
                         # if isinstance(nmse_val, tuple):
                         #     nmse_val = nmse_val[0]
@@ -389,7 +397,8 @@ if __name__ == '__main__':
                     'NMSE': nmse,
                     'N': str(N),
                     'b': bs,
-                    'delays': delays
+                    'delays': delays,
+                    'Computational Time (s)': computation_time,
                 })
                 
     df = pd.DataFrame(data)

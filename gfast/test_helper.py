@@ -315,10 +315,6 @@ class TestHelper:
             nmse = np.linalg.norm(y_hat - samples) ** 2 / np.linalg.norm(samples) ** 2
             r2 = r2_score(np.real(y_hat), np.real(samples))
             # print(f"NMSE: {nmse}, R2: {r2}")
-            import matplotlib.pyplot as plt
-            plt.figure()
-            plt.plot(np.real(y_hat), np.real(samples))
-            plt.savefig('/usr/scratch/dtsui/FinalizedCodes/gfast/gfp_results/q20_n12_nso_0.012/test.png')
             return nmse, r2
         else:
             return 1, -1
