@@ -25,7 +25,6 @@ if __name__ == "__main__":
     batch_size = 512
     device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     model = load_model('model/mlp.pt', device=device)
-    batch_size = 512
     sequence = read_fasta('model/avGFP.fasta')
     sequence = sequence[:-1]
     banned_indices_toggle = str_to_bool(args.banned_indices_toggle)
@@ -122,3 +121,19 @@ if __name__ == "__main__":
     all_values = np.array(all_values, dtype=complex) - all_samples_mean
     samples_dict = {key: value for key, value in zip(samples_dict.keys(), all_values)}
     save_data(samples_dict, sample_file)
+
+
+def compute_scores(n, sequence, samples, banned_indices, banned_indices_toggle=True):
+    device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    batch_size = 512
+    model = load_model('model/mlp.pt', device=device)
+
+    samples = samples.T
+    if banned_indices_toggle == True:
+        seqs = aa_indices(n, sequence, samples, banned_indices=banned_indices, banned_indices_toggle=banned_indices_toggle)
+    else:
+        seqs = aa_indices(n, sequence, all_query_indices, banned_indices_toggle=banned_indices_toggle)
+
+    one_hot_encoded_sequences = one_hot_encode(seqs)
+    all_outputs = sample_model(model, one_hot_encoded_sequences, batch_size=batch_size, device=device)
+    return all_outputs

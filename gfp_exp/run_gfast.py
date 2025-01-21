@@ -137,8 +137,8 @@ if __name__ == "__main__":
         print('----------')
         print(f"b: {b}, d: {num_repeat} - R^2: {r2_value}, NMSE: {nmse}")
 
-    # with open(f'{exp_dir}/gwht.pkl', 'wb') as f:
-    #     pickle.dump(gwht, f)
+    with open(f'{exp_dir}/gwht.pkl', 'wb') as f:
+        pickle.dump(gwht, f)
 
     if banned_indices_toggle:
         qs = get_qs(q, n, banned_indices)

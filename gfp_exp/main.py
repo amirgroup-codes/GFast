@@ -15,7 +15,8 @@ import subprocess
 from src.helper import Helper
 from gfp_utils import read_fasta, select_aas, convert_encoding, aa_indices, sample_model, one_hot_encode, load_model, get_random_test_samples, qary_to_aa_encoding
 from gfast.plot_utils import calculate_samples
-from gfast.utils import load_data, save_data, get_qs, summarize_results, process_stdout, qary_vector_banned, dec_to_qary_vec, save_data4, qary_vec_to_dec, find_matrix_indices, decimal_banned
+from gfast.utils import load_data, save_data, get_qs, summarize_results, process_stdout, qary_vector_banned, dec_to_qary_vec, save_data4, qary_vec_to_dec, find_matrix_indices, decimal_banned, test_nmse
+from compute_samples import compute_scores
 
 
 def parse_args():
@@ -98,6 +99,9 @@ if __name__ == "__main__":
         # We want to use the same test indices across all different runs, so we will override 
         # the generated test helper indices by specifying the same indices for all runs
         test_samples = get_random_test_samples(q, n, banned_indices_n) # We need to convert this to be amino acid specific
+        test_samples_nmse = get_random_test_samples(q, n, banned_indices_n) 
+        scores_nmse = compute_scores(n, sequence, test_samples_nmse, banned_indices_n, banned_indices_toggle=True)
+
         qary_to_aa_dict = qary_to_aa_encoding(banned_indices_n)
         qary_to_aa_dict_qsft = qary_to_aa_encoding(trimmed_banned_indices_n)
         reversed_qary_to_aa_dict_qsft = {
@@ -176,19 +180,19 @@ if __name__ == "__main__":
                 newfolder = f'delta{delta}_b{b1}_d{d}'
                 exp_dir = base_dir / newfolder
                 exp_dir.mkdir(parents=True, exist_ok=True)
-                # subprocess.run([
-                #     "python", "get_qary_indices.py", 
-                #     "--q", str(q), 
-                #     "--n", str(n), 
-                #     "--delta", str(delta), 
-                #     "--b", str(b1), 
-                #     "--num_subsample", str(num_subsample), 
-                #     "--num_repeat", str(d), 
-                #     "--banned_indices_path", f"{base_dir}/banned_indices_n.pkl", 
-                #     "--exp_dir", str(exp_dir),
-                #     "--banned_indices_toggle", 'False',
-                #     "--delays_method_channel", delays_method_channel
-                # ])
+                subprocess.run([
+                    "python", "get_qary_indices.py", 
+                    "--q", str(q), 
+                    "--n", str(n), 
+                    "--delta", str(delta), 
+                    "--b", str(b1), 
+                    "--num_subsample", str(num_subsample), 
+                    "--num_repeat", str(d), 
+                    "--banned_indices_path", f"{base_dir}/banned_indices_n.pkl", 
+                    "--exp_dir", str(exp_dir),
+                    "--banned_indices_toggle", 'False',
+                    "--delays_method_channel", delays_method_channel
+                ])
                 subprocess.run([
                     "python", "get_qary_indices.py", 
                     "--q", str(q), 
@@ -232,15 +236,6 @@ if __name__ == "__main__":
                     "--banned_indices_toggle", 'True',
                     "--banned_indices_path", f"{base_dir}/qsft_banned_indices_n.pkl"
                 ])
-                # subprocess.run([
-                #     "python", "compute_samples.py", 
-                #     "--n", str(n), 
-                #     "--num_subsample", str(num_subsample), 
-                #     "--num_repeat", str(d), 
-                #     "--exp_dir", str(exp_dir),
-                #     "--banned_indices_toggle", 'False',
-                #     "--banned_indices_path", f"{base_dir}/banned_indices_n.pkl"
-                # ])
 
                 # Run GFast
                 result = subprocess.Popen([
@@ -257,32 +252,22 @@ if __name__ == "__main__":
                     "--delays_method_channel", delays_method_channel,
                     "--hyperparam", str(hyperparam)
                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-                # result = subprocess.Popen([
-                #     "python", "run_gfast.py", 
-                #     "--q", str(q), 
-                #     "--n", str(n), 
-                #     "--b", str(b1),
-                #     "--num_subsample", str(num_subsample), 
-                #     "--num_repeat", str(d), 
-                #     "--exp_dir", str(exp_dir),
-                #     "--banned_indices_toggle", 'False',
-                #     "--banned_indices_path", f"{base_dir}/banned_indices_n.pkl",
-                #     "--delays_method_source", delays_method_source,
-                #     "--delays_method_channel", delays_method_channel,
-                #     "--hyperparam", str(hyperparam)
-                # ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
                 
                 captured_output = []
                 for line in result.stdout:
                     print(line, end="")
                     captured_output.append(line.strip())
                 result.wait()
-                nmse = process_stdout(captured_output)
+                # nmse = process_stdout(captured_output)
 
-                # # Validate on the ground truth data
-                # gwht = np.load(f'{exp_dir}/gwht.pkl', allow_pickle=True)
-                # protein_nmse = test_nmse(qsft_set, y, gwht, q, n, {})
-                # print(f"Protein NMSE: {protein_nmse}")
+                # Validate on new test data
+                converted_test_samples_nmse = np.array([
+                    [new_dict[i][value] for value in test_samples_nmse[i]]
+                    for i in range(test_samples_nmse.shape[0])
+                ])
+                gwht = np.load(f'{exp_dir}/gwht.pkl', allow_pickle=True)
+                nmse = test_nmse(converted_test_samples_nmse, scores_nmse, gwht, q, n, exp_dir, trimmed_banned_indices_n)
+                print(f"NMSE: {nmse}")
                 print('----------')
 
 
@@ -365,12 +350,12 @@ if __name__ == "__main__":
                     print(line, end="")
                     captured_output.append(line.strip())
                 result.wait()
-                nmse = process_stdout(captured_output)
+                # nmse = process_stdout(captured_output)
 
-                # # Validate on the ground truth data
-                # gwht = np.load(f'{exp_dir}/gwht.pkl', allow_pickle=True)
-                # protein_nmse = test_nmse(gfast_set, y, gwht, q, n, banned_indices_n)
-                # print(f"Protein NMSE: {protein_nmse}")
+                # Validate on new test data
+                gwht = np.load(f'{exp_dir}/gwht.pkl', allow_pickle=True)
+                nmse = test_nmse(test_samples_nmse, scores_nmse, gwht, q, n, exp_dir, banned_indices_n)
+                print(f"NMSE: {nmse}")
                 print('----------')
 
                 data.append({
@@ -383,142 +368,4 @@ if __name__ == "__main__":
 
         df = pd.DataFrame(data)
         df.to_csv(f'../gfp_results/q{q}_n{n}_{delays_method_channel}_{threshold}.csv')
-
-            # for qs, delta in zip(all_qs, args.delta):
-            #     print(f'GFast delta {delta}:')
-            #     samples = []
-            #     nmse = []
-            #     differences = [abs(calculate_samples(qs, n//b1, b1, 1) - max_samples) for b1 in range(b, n)]
-            #     nearest_b = np.argmin(differences) + b
-
-            #     for b1 in range(1, nearest_b + 1):
-            #         query_args.update({
-            #             "num_subsample": n//b1,
-            #             "b": b1,
-            #             })
-            #         gfast_args.update({
-            #             "num_subsample": n//b1,
-            #             "b": b1,
-            #         })
-
-            #         # Modify the input to get different number of samples
-            #         nmse_perms = []
-
-            #         # Create permutation matrices
-            #         # print(qs.shape)
-            #         perm_matrices = permutation_matrices(qs, num_permutations)
-            #         for j, permutation_matrix in enumerate(perm_matrices):
-            #             newfolder = f'iter{i}_delta{delta}_b{b1}_perm{j}'
-            #             exp_dir = base_dir / newfolder
-            #             exp_dir.mkdir(parents=True, exist_ok=True)
-
-            #             perm_qs = (permutation_matrix @ qs.T).astype(int).T
-            #             perm_locq = (permutation_matrix @ locq)
-            #             banned_indices = get_banned_indices_from_qs(perm_qs, q)
-            #             signal_params.update({
-            #                 'banned_indices': banned_indices,
-            #                 'locq': perm_locq,
-            #             })
-
-
-
-            #             # Run GFast and compute NMSE
-            #             helper = SyntheticHelper(signal_args=signal_params, methods=methods, subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir, subsampling=True)
-            #             result = helper.compute_model('gfast', gfast_args, report=True, verbosity=0)
-            #             samples.append(result['n_samples'])
-            #             nmse_val = helper.test_model('gfast', beta=result['gwht'])
-            #             if isinstance(nmse_val, tuple):
-            #                 nmse_val = nmse_val[0]
-            #                 nmse_perms.append(nmse_val)
-            #             else:
-            #                 nmse_perms.append(nmse_val)
-            #             print(f'- b = {b1}, perm = {j} (samples = {result["n_samples"]}): NMSE = {nmse_val}')
-            #             # print(permutation_matrix)
-            #             # print(perm_qs, qs)
-
-            #         nmse = nmse + nmse_perms
-            #         if np.mean(nmse_perms) < threshold:
-            #             break
-
-
-            # query_args = {
-            #     "query_method": "simple",
-            #     "num_subsample": num_subsample,
-            #     "delays_method_source": delays_method_source,
-            #     "subsampling_method": "gfast",
-            #     "delays_method_channel": delays_method_channel,
-            #     "num_repeat": num_repeat,
-            #     "b": b1,
-            #     "t": t,
-            #     "folder": exp_dir 
-            # }
-            # signal_args = {
-            #                 "n":n,
-            #                 "q":q,
-            #                 "noise_sd":noise_sd,
-            #                 "query_args":query_args,
-            #                 "t": t,
-            #                 'banned_indices_toggle': False,
-            #                 'banned_indices': banned_indices_qsft
-            #                 }
-            # test_args = {
-            #         "n_samples": 10000
-            #     }
-            
-            # helper = Helper(signal_args=signal_args, methods=["gfast"], subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir)
-            # model_kwargs = {}
-            # model_kwargs["num_subsample"] = num_subsample
-            # model_kwargs["num_repeat"] = num_repeat
-            # model_kwargs["b"] = b1
-            # test_kwargs = {}
-            # model_kwargs["n_samples"] = num_subsample * (helper.q ** b1) * num_repeat * (helper.n + 1)
-            # model_kwargs["noise_sd"] = noise_sd
-            # model_result = helper.compute_model(method="gfast", model_kwargs=model_kwargs, report=True, verbosity=0)
-            # test_kwargs["beta"] = model_result.get("gwht")
-            # nmse, r2_value = helper.test_model("gfast", **test_kwargs)
-            # gwht = model_result.get("gwht")
-            # locations = model_result.get("locations")
-            # n_used = model_result.get("n_samples")
-            # avg_hamming_weight = model_result.get("avg_hamming_weight")
-            # max_hamming_weight = model_result.get("max_hamming_weight")
-            # print(f"R^2: {r2_value}, NMSE: {nmse}")
-
-            # qs = get_qs(q, n, banned_indices_qsft)
-            # summarize_results(locations, gwht, q, n, b1, noise_sd, n_used, r2_value, nmse, avg_hamming_weight, max_hamming_weight, exp_dir, args, qs)
-
-
-
-
-
-            # query_args = {
-            #     "query_method": "generate_samples",
-            #     "method": "generate_samples",
-            #     "num_subsample": num_subsample,
-            #     "num_repeat": num_repeat,
-            #     "b": b1,
-            #     "folder": exp_dir 
-            # }
-            # signal_args = {
-            #     "n":n,
-            #     "q":q,
-            #     "query_args":query_args,
-            #     "len_seq":n,
-            #     "banned_indices_toggle": True,
-            #     "banned_indices": banned_indices_n
-            #     }
-            # test_args = {
-            #         "n_samples": 10000,
-            #         "method": "generate_samples"
-            #     }
-            # file_path = os.path.join(exp_dir, 'train', 'samples')
-            # if not os.path.exists(file_path):
-            #     os.makedirs(file_path, exist_ok=True)
-            # file_path = os.path.join(exp_dir, 'test')
-            # if not os.path.exists(file_path):
-            #     os.makedirs(file_path, exist_ok=True)
-
-            # try:
-            #     helper = Helper(signal_args=signal_args, methods=["gfast"], subsampling_args=query_args, test_args=test_args, exp_dir=exp_dir)
-            # except ScriptCompleted as e:
-            #     print(f"Handled completion of input_signal_subsampled.py: {e}")
 
