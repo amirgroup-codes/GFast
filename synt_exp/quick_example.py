@@ -11,8 +11,8 @@ delta = 0.33
 if __name__ == '__main__':
     np.random.seed(int(time.time()))
     q = 3
-    n = 15
-    b = 5
+    n = 8
+    b = 2
     qs = get_qs_from_delta(0, q, n)
     print(qs, np.prod(qs))
     banned_indices = get_banned_indices_from_qs(qs, q)
@@ -20,8 +20,8 @@ if __name__ == '__main__':
     a_min = 1
     a_max = 1
     t = n
-    sparsity = 20
-    num_subsample = 3
+    sparsity = int(np.prod(qs) ** delta)
+    num_subsample = 4
     num_repeat = n
     t = n
     delays_method_source = "identity"
@@ -67,3 +67,6 @@ if __name__ == '__main__':
     print('Num coeffs:', len(gwht), len(test_signal.signal_w))
     print("NMSE GFAST = ",
          np.sum(np.abs(list(signal_w_diff.values())) ** 2) / np.sum(np.abs(list(test_signal.signal_w.values())) ** 2))
+
+    
+    
