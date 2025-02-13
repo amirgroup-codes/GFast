@@ -3,6 +3,10 @@ synt_exp/__pycache__
 gfp_exp/__pycache__
 gfp_results/q20_n12_nr_0.01
 gfp_results/q20_n12_nr_0.05
+gfp_results/q20_n12_nr_0.05.tar.gz
 gfp_results/q20_n12_nr_0.01.csv
 synt_results/q7_n20_uniform_S1000_snr10_nr
+synt_results/q7_n20_uniform_S1000_snr10_nr_reduced
+synt_results/q7_n20_uniform_S1000_snr10_nr.tar.gz
 synt_results/q7_n20_uniform_S1000_snr100
+synt_results/q7_n20_uniform_S1000_snr100.tar.gz

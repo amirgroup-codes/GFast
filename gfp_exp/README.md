@@ -26,4 +26,6 @@ sh main.sh
 - **nmse.png:** only generated with hyperparam=True. Summary of tuning `noise_sd`
 - **gwht.pkl:** Fourier coefficients recovered
 
+In addition to the CSVs provided, we provide the results folders for each experiment in the figshare data repository under accession code [28414232](https://figshare.com/articles/dataset/GFast/28414232).
+
 Each folder is labelled as `delta{delta}_b{b}_d{d}` where `delta=0` for q-SFT and `delta=1` for GFast, `b` is the subsampling dimension, and `d` is the number of repeats.

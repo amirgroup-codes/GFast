@@ -20,6 +20,9 @@ sh synth_exp.sh
 - **test/:** unused for experiments
 - **train/:** contains all samples used to recover Fourier coefficients
 
+In addition to the CSVs provided, we provide the results folders for each experiment in the figshare data repository under accession code [28414232](https://figshare.com/articles/dataset/GFast/28414232).
+
 For GFast, each folder is labelled as `iter{i}_delta{delta}_b{b}_perm{p}` where `i` is the iteration number, `delta` is the number of alphabets that aren't present from the original q-SFT function, `b` is the subsampling dimension, and `p` is the number of permutations used to manipulate the subsampling patterns.
 
 For NR-GFast, each folder is labelled as `iter{i}_delta{delta}_b{b}_d{d}}` where `i` is the iteration number, `delta` is the number of alphabets that aren't present from the original q-SFT function, `b` is the subsampling dimension, and `d` is the number of repeats.
+- Due to file size limitations, we only upload the results for `iter0`, `b=5`, and `d=20` across all NR-GFast experiments, and leave a CSV with the full results. We recommend running the NR-GFast experiments for yourself to get all the files.
