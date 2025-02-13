@@ -61,7 +61,6 @@ def select_aas(sequence, threshold, model_weights):
         if len(indices_below) == len(row):
             #if ALL AAs are below the threshold we need at least one so we choose the wild type
             wild_type_aa = aa_dict[sequence[i]]
-            # max_idx = np.argmax(np.abs(row))
             indices_below.remove(wild_type_aa)
         if len(indices_below) != 0:
             banned_indices[i] = indices_below
@@ -124,11 +123,9 @@ def aa_indices(n, sequence, all_query_indices, banned_indices_toggle=True, banne
         for key, value in banned_indices.items():
             encoding_reduced = {k: v for k, v in num_encoding.items() if k not in value}
             site_aa_encoding[key] = {new_key: v for new_key, (_, v) in enumerate(encoding_reduced.items())}
-    # print(n, len(sequence))
-    # print(all_query_indices.shape)
     if n < len(sequence):
         if banned_indices_toggle:
-            indices_aas = [] #remember to change this!
+            indices_aas = [] 
             for row in all_query_indices:
                 new_row = []
                 for k, num in enumerate(row):
@@ -190,149 +187,8 @@ def qary_to_aa_encoding(banned_indices):
         for outer_key, inner_dict in site_aa_encoding.items()
     }
 
-    # # Step 2: Flip the keys and values in the inner dictionary
-    # flipped_dict = {
-    #     outer_key: {value: key for key, value in inner_dict.items()}
-    #     for outer_key, inner_dict in numerical_encoded_dict.items()
-    # }
-
     return qary_to_aa_dict
 
-
-# def test_nmse(samples, y, beta, q, n, banned_indices):
-
-#     if len(beta.keys()) > 0:
-#         batch_size = 10000
-#         beta_keys = list(beta.keys())
-#         beta_values = list(beta.values())
-#         y_hat = []
-
-#         for i in range(0, samples.shape[0], batch_size):
-#             sample_idx_batch = samples[i:i + batch_size, :]
-#             H = np.empty((np.shape(sample_idx_batch)[0], np.shape(beta_keys)[0]), dtype=complex)
-#             for i, k in enumerate(np.array(beta_keys)):
-#                 signature = get_signature(q, n, sample_idx_batch, k, banned_indices=banned_indices)
-#                 H[:, i] = signature.T
-#             y_hat.append(H @ np.array(beta_values))
-#         y_hat = np.concatenate(y_hat)
-#         nmse = np.linalg.norm(y_hat - y) ** 2 / np.linalg.norm(y) ** 2
-#         return nmse
-#     else:
-#         return 1
-    
-    # print(flipped_dict)
-    # if banned_indices_toggle:
-    #     # Adjust amino acid dictionary to only include the amino acids that are not in the banned indices
-    #     site_aa_encoding = {}
-    #     for key, value in banned_indices.items():
-    #         encoding_reduced = {k: v for k, v in num_encoding.items() if k not in value}
-    #         site_aa_encoding[key] = {new_key: v for new_key, (_, v) in enumerate(encoding_reduced.items())}
-
-    # qary_to_aa = {}
-    # for i in range(n):
-    #     qary_to_aa[i] = 
-
-    # if n < len(sequence):
-    #     if banned_indices_toggle:
-    #         indices_aas = [] #remember to change this!
-    #         for row in all_query_indices:
-    #             new_row = []
-    #             for k, num in enumerate(row):
-    #                 if k in banned_indices:
-    #                     encoding_dict = site_aa_encoding[k]
-    #                 else:
-    #                     encoding_dict = num_encoding
-    #                 encoded_num = encoding_dict[num]
-    #                 new_row.append(encoded_num)
-    #             indices_aas.append(new_row)
-    #         indices_aas = [list(map(str, row)) for row in indices_aas]
-    #     else:
-    #         indices_aas = [[num_encoding[num] for num in row] for row in all_query_indices]
-    #         indices_aas = [list(map(str, row)) for row in indices_aas]
-
-    #     seq_padding = list(sequence)
-    #     seqs = [''.join(row) + ''.join(seq_padding[len(row):]) for row in indices_aas]
-    #     seqs = [list(seq) for seq in seqs]
-    # else:
-    #     if banned_indices_toggle:
-    #         indices_aas = []
-    #         for row in all_query_indices:
-    #             new_row = []
-    #             for k, num in enumerate(row):
-    #                 if k in banned_indices:
-    #                     encoding_dict = site_aa_encoding[k]
-    #                 else:
-    #                     encoding_dict = num_encoding
-    #                 encoded_num = encoding_dict[num]
-    #                 new_row.append(encoded_num)
-    #             indices_aas.append(new_row)
-    #         indices_aas = [list(map(str, row)) for row in indices_aas]
-
-    #     else:
-    #         indices_aas = [[num_encoding[num] for num in row] for row in all_query_indices]
-    #         indices_aas = [list(map(str, row)) for row in indices_aas]
-    #     seqs = [''.join(row) for row in indices_aas]
-    #     seqs = [list(seq) for seq in seqs]
-    # return seqs
-
-    
-
-# def convert_encoding(query_indices_banned, banned_indices):
-#     """
-#     Given mixed-radix indices, convert banned indices to get same AAs in regular space
-#     """
-#     n_samples, seq_length = query_indices_banned.shape
-#     query_indices_regular = np.zeros_like(query_indices_banned)
-#     site_aa_encoding = {}
-#     for key, value in banned_indices.items():
-#         encoding_reduced = {k: v for k, v in num_encoding.items() if k not in value}
-#         site_aa_encoding[key] = {new_key: v for new_key, (_, v) in enumerate(encoding_reduced.items())}
-#     for j in range(seq_length):
-#         for i in range(n_samples):
-#             banned_num = query_indices_banned[i,j]
-#             if j in banned_indices:
-#                 aa = site_aa_encoding[j][banned_num]
-#                 for reg_num, reg_aa in num_encoding.items():
-#                     if reg_aa == aa:
-#                         query_indices_regular[i,j] = reg_num
-#                         break
-#             else:
-#                 #if position not banned, use same number
-#                 query_indices_regular[i,j] = banned_num
-    
-#     return query_indices_regular
-
-# def convert_encoding(query_indices_banned, banned_indices):
-#     n_samples, seq_length = query_indices_banned.shape
-#     query_indices_regular = np.zeros_like(query_indices_banned)
-    
-#     # Create banned encoding
-#     site_aa_encoding = {}
-#     for key, value in banned_indices.items():
-#         encoding_reduced = {k: v for k, v in num_encoding.items() if k not in value}
-#         print(f"\nPosition {key} reduced encoding:", encoding_reduced)
-#         site_aa_encoding[key] = {new_key: v for new_key, (_, v) in enumerate(encoding_reduced.items())}
-#         print(f"Position {key} site encoding:", site_aa_encoding[key])
-    
-#     for i in range(n_samples):
-#         for j in range(seq_length):
-#             banned_num = query_indices_banned[i,j]
-            
-#             if j in banned_indices:
-#                 print(f"\nProcessing position {j}, banned_num {banned_num}")
-#                 print(f"Site encoding at this position:", site_aa_encoding[j])
-#                 aa = site_aa_encoding[j][banned_num]
-#                 print(f"Got AA: {aa}")
-#                 print(f"Looking for regular number that gives {aa}")
-#                 for reg_num, reg_aa in num_encoding.items():
-#                     if reg_aa == aa:
-#                         query_indices_regular[i,j] = reg_num
-#                         print(f"Found regular number {reg_num}")
-#                         break
-#             else:
-#                 query_indices_regular[i,j] = banned_num
-    
-#     return query_indices_regular
 
 def convert_encoding(query_indices_banned, banned_indices):
     """

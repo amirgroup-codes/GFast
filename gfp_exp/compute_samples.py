@@ -49,7 +49,6 @@ if __name__ == "__main__":
                     seqs = aa_indices(n, sequence, all_query_indices, banned_indices=banned_indices, banned_indices_toggle=banned_indices_toggle)
                 else:
                     seqs = aa_indices(n, sequence, all_query_indices, banned_indices_toggle=banned_indices_toggle)
-                # seqs = aa_indices(n, sequence, all_query_indices, banned_indices_toggle=banned_indices_toggle)
 
                 # One-hot encode sequences and sample
                 one_hot_encoded_sequences = one_hot_encode(seqs)
@@ -102,10 +101,7 @@ if __name__ == "__main__":
             seqs = aa_indices(n, sequence, all_query_indices, banned_indices=banned_indices, banned_indices_toggle=banned_indices_toggle)
         else:
             seqs = aa_indices(n, sequence, all_query_indices, banned_indices_toggle=banned_indices_toggle)
-        # if banned_indices_toggle == True: 
-        #     save_data(seqs, os.path.join(exp_dir, "test", "seqs_banned.pickle"))
-        # else:
-        #     save_data(seqs, os.path.join(exp_dir, "test", "seqs_regular.pickle"))
+
         # One-hot encode sequences and sample
         one_hot_encoded_sequences = one_hot_encode(seqs)
         all_outputs = sample_model(model, one_hot_encoded_sequences, batch_size=batch_size, device=device)
