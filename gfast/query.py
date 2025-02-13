@@ -3,12 +3,11 @@ Methods for the query generator: specifically, to
 
 1. generate sparsity coefficients b and subsampling matrices M
 2. get the indices of a signal subsample
-3. compute a subsampled and delayed Walsh-Hadamard transform.
+3. compute a subsampled and delayed Fourier transform.
 '''
 import time
 import numpy as np
 from gfast.utils import fwht, gwht, bin_to_dec, binary_ints, qary_ints, get_qs, banned_random
-#from gfast.ReedSolomon import ReedSolomon
 
 
 def get_Ms_simple(n, b, q, num_to_get=None):
@@ -99,28 +98,17 @@ def get_D_random(n, **kwargs):
     '''
     q=kwargs.get("q")
     num_delays = kwargs.get("num_delays")
-    banned_indices_toggle = kwargs.get('banned_indices_toggle')
-    # if banned_indices_toggle:
-    #     banned_indices = kwargs.get("banned_indices")
-    #     qs = get_qs(q, n, banned_indices=banned_indices)
-    #     return np.random.uniform(0, qs, size=(num_delays, n))
-    return np.random.choice(q, (num_delays, n)) #np.zeros((num_delays, n))#np.random.choice(q, (num_delays, n))
+    return np.random.choice(q, (num_delays, n))
 
 
-def get_D_source_coded(n, **kwargs):
-    q = kwargs.get("q")
-    t_max = kwargs.get("t")
-    D = ReedSolomon(n, t_max, q).get_delay_matrix()
-    return np.array(D, dtype=int)
 
-
-def get_D_nso(n, D_source, **kwargs):
+def get_D_nr(n, D_source, **kwargs):
     '''
-    Get a repetition code based (NSO-SPRIGHT) delays matrix. See get_D for full signature.
+    Get a repetition code based (NR) delays matrix. See get_D for full signature.
     '''
     banned_indices_toggle = kwargs.get('banned_indices_toggle')
     if banned_indices_toggle:
-        return get_D_nso_banned(n, D_source, **kwargs)
+        return get_D_nr_banned(n, D_source, **kwargs)
     num_repeat = kwargs.get("num_repeat")
     q = kwargs.get("q")
     random_offsets = get_D_random(n, q=q, num_delays=num_repeat)
@@ -131,7 +119,7 @@ def get_D_nso(n, D_source, **kwargs):
     return D
 
 
-def get_D_nso_banned(n , D_source, **kwargs):
+def get_D_nr_banned(n , D_source, **kwargs):
     '''
     Not sure how useful this is, again we must assume that P (#rows in D) is num_repeat * (n + 1)
     '''
@@ -181,11 +169,10 @@ def get_D(n, **kwargs):
     D = {
         "random": get_D_random,
         "identity": get_D_identity,
-        "coded": get_D_source_coded
     }.get(delays_method_source)(n, **kwargs)
     delays_method_channel = kwargs.get("delays_method_channel", "identity")
     D = {
-            "nso": get_D_nso,
+            "nr": get_D_nr,
             "coded": get_D_channel_coded,
             "identity": get_D_channel_identity
     }.get(delays_method_channel)(n, D, **kwargs)
@@ -279,17 +266,3 @@ def compute_delayed_wht(signal, M, D):
     samples_to_transform = signal.signal_t[np.array([subsample_indices(M, d) for d in D])] # subsample to allow small WHTs
     return np.array([fwht(row) for row in samples_to_transform]), used_inds # compute the small WHTs
 
-
-# def get_reed_solomon_dec(n, t_max, q):
-#     """
-#     Gets a suitable reed solomon decoder
-
-#     Returns
-#     -------
-#     A Reed Solomon syndrome decoder for a t_max error correcting code.
-#     """
-#     primeset = [2, 3, 5, 7, 11, 13, 15, 17, 19, 23, 29]
-#     if q in primeset:
-#         return ReedSolomon(n, t_max, q).syndrome_decode
-#     else:
-#         raise NotImplementedError("q is not a prime number under 30!")

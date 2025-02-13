@@ -1,5 +1,5 @@
 '''
-Class for computing the q-ary fourier transform of a function/signal
+Class for computing the generalized q-ary fourier transform of a function/signal
 '''
 import time
 import math
@@ -21,23 +21,18 @@ class GFAST:
     reconstruct_method_source : str
     method of reconstruction for source coding: "identity" - default setting, should be used unless you know that all
                                                 indicies have low hamming weight
-                                                "coded" - Currently only supports prime q, if you know the max hamming
-                                                weight of less than t this option should be used and will greatly reduce
-                                                complexity. Note a source_decoder object must also be passed
     reconstruct_method_channel : str
-    Method of reconstruction for channel coding: "mle" - exact MLE computation. Fine for small problems but not
-                                                         recommended it is exponential in n
-                                                 "nso" - symbol-wise recovery suitable when a repetition type code is used
-                                                 "identity" - no channel coding, only use when there is no noise
+    Method of reconstruction for channel coding: "nr" - symbol-wise recovery suitable when a repetition type code is used
+                                                 "identity" - no channel coding
     num_subsamples : int
     The number of different subsampling groups M used
 
     num_repeat : int
-    When a repetition code is used for channel coding, (NSO) this is the number of repetitions
+    When a repetition code is used for channel coding, (NR) this is the number of repetitions
 
     b : int
-    Size of the sub-sampling signal. In general, we need q^b = O(K) where K is the number of nonzero terms in the
-    transform. In practice, any q^b > K typically works well.
+    Length of alphabet subset. In general, we need np.prod(bc) = O(S) where K is the number of nonzero terms in the
+    transform. In practice, any np.prod(bc) > S typically works well.
 
     noise_sd : scalar
     A noise parameter. Roughly, the standard deviation of the noise if it was an additive gaussian.
@@ -79,7 +74,7 @@ class GFAST:
           Returns
           -------
           gwht : dict
-          Fourier transform (WHT) of the input signal
+          Fourier transform of the input signal
 
           runtime : scalar
           transform time + peeling time.
@@ -143,14 +138,11 @@ class GFAST:
         # begin peeling
         # index convention for peeling: 'i' goes over all M/U/S values
         # i.e. it refers to the index of the subsampling group (zero-indexed - off by one from the paper).
-        # 'j' goes over all columns of the WHT subsample matrix, going from 0 to 2 ** b - 1.
-        # e.g. (i, j) = (0, 2) refers to subsampling group 0, and aliased bin 2 (10 in binary)
-        # which in the example of section 3.2 is the multiton X[0110] + X[1010] + W1[10]
+        # 'j' goes over all columns of the subsample matrix, going from 0 to np.prod(qs_subset[0]) - 1.
+        # e.g. (i, j) = (0, w) refers to subsampling group 0, and aliased bin w (convert w to the qs subset vector)
 
         # a multiton will just store the (i, j)s in a list
-        # a singleton will map from the (i, j)s to the true (binary) values k.
-        # e.g. the singleton (0, 0), which in the example of section 3.2 is X[0100] + W1[00]
-        # would be stored as the dictionary entry (0, 0): array([0, 1, 0, 0]).
+        # a singleton will map from the (i, j)s to the true generalized q-ary values k.
         max_iter = 15
         iter_step = 0
         cont_peeling = True
@@ -170,9 +162,6 @@ class GFAST:
             singletons = {}  # dictionary from (i, j) values to the true index of the singleton, k.
             multitons = []  # list of (i, j) values indicating where multitons are.
             samples_used = 0
-            singles = 0
-            multis = 0
-            zeros = 0
 
 
             
@@ -187,9 +176,6 @@ class GFAST:
                     for j, col in enumerate(U_new.T):
                         j_qary = np.array(qary_vector_banned(j, qs))
                         if np.linalg.norm(col) ** 2 > group_cutoff * len(col):
-                            # if run:
-                            #     print(np.linalg.norm(col))
-                            #     run = False
                             k = singleton_detection(
                                 col,
                                 method_channel=self.reconstruct_method_channel,
@@ -197,7 +183,6 @@ class GFAST:
                                 q=q,
                                 n=n,
                                 source_parity=signal.get_source_parity(),
-                                nso_subtype="nso1",
                                 source_sdecoder=self.source_decoder,
                                 banned_indices = signal.banned_indices,
                                 banned_indices_toggle = signal.banned_indices_toggle
@@ -218,7 +203,6 @@ class GFAST:
                                 if verbosity >= 3:
                                     print("We have a Singleton at " + str(k))
                         else:
-                            zeros += 1
                             if verbosity >= 6:
                                 print("We have a Zeroton")
             else:
@@ -235,7 +219,6 @@ class GFAST:
                                 method_source=self.reconstruct_method_source,
                                 q=q,
                                 source_parity=signal.get_source_parity(),
-                                nso_subtype="nso1",
                                 source_decoder=self.source_decoder
                             )
                             signature = omega ** (D @ k)
@@ -247,17 +230,14 @@ class GFAST:
                             if verbosity >= 5:
                                 print((i, j), np.linalg.norm(residual) ** 2, cutoff * len(col))
                             if (not bin_matching) or np.linalg.norm(residual) ** 2 > cutoff * len(col):
-                                multis += 1
                                 multitons.append((i, j))
                                 if verbosity >= 6:
                                     print("We have a Multiton")
                             else:  # declare as singleton
-                                singles += 1
                                 singletons[(i, j)] = (k, rho)
                                 if verbosity >= 3:
                                     print("We have a Singleton at " + str(k))
                         else:
-                            zeros += 1
                             if verbosity >= 6:
                                 print("We have a Zeroton")
             # all singletons and multitons are discovered
@@ -356,8 +336,4 @@ class GFAST:
                 "avg_hamming_weight": avg_hamming_weight,
                 "max_hamming_weight": max_hamming_weight
             }
-            if verbosity > 0:
-                print("singletons:", len(singletons))
-                print('multitons', len(multitons))
-                print('zerotons:', zeros)
             return result

@@ -1,8 +1,8 @@
 gfast/__pycache__
 synt_exp/__pycache__
 gfp_exp/__pycache__
-gfp_results/q20_n12_nso_0.01
-gfp_results/q20_n12_nso_0.05
-gfp_results/q20_n12_nso_0.01.csv
-synt_results/q7_n20_uniform_S1000_snr10_nso
+gfp_results/q20_n12_nr_0.01
+gfp_results/q20_n12_nr_0.05
+gfp_results/q20_n12_nr_0.01.csv
+synt_results/q7_n20_uniform_S1000_snr10_nr
 synt_results/q7_n20_uniform_S1000_snr100

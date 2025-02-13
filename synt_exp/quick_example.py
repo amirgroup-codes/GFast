@@ -2,30 +2,35 @@ import numpy as np
 import sys
 sys.path.append('..')
 from gfast.gfast import GFAST
-from gfast.utils import get_qs
+from gfast.utils import get_qs, get_banned_indices_from_qs, get_qs_from_delta, get_qs_from_delta_random, calculate_samples, get_qs_from_delta_sitewise
 import time
-from gfast.plot_utils import get_banned_indices_from_qs, get_qs_from_delta, get_qs_from_delta_random, calculate_samples, get_qs_from_delta_sitewise
 from synt_exp.synt_src.synthetic_signal import generate_banned_signal_w, SyntheticSubsampledSignal
 
-delta = 0.33
+delta = 0.3
+snr = 10
 if __name__ == '__main__':
     np.random.seed(int(time.time()))
-    q = 3
-    n = 8
+    #np.random.seed(42)
+    q = 4
+    n = 6
     b = 2
-    qs = get_qs_from_delta(0, q, n)
+    qs = np.array([4, 4, 3, 3, 3, 4])
+    #qs = get_qs_from_delta(3, q, n)
     print(qs, np.prod(qs))
     banned_indices = get_banned_indices_from_qs(qs, q)
-    noise_sd = 2
     a_min = 1
     a_max = 1
     t = n
     sparsity = int(np.prod(qs) ** delta)
-    num_subsample = 4
+    print('sparsity:', sparsity)
+    #noise_sd = np.sqrt((sparsity * a_max**2) / (10**(snr / 10)))
+    noise_sd = 2
+    print('noise sd:', noise_sd)
+    num_subsample = 3
     num_repeat = n
     t = n
     delays_method_source = "identity"
-    delays_method_channel = "nso" 
+    delays_method_channel = "nr" 
     banned_indices_toggle = True
     query_args = {
         "query_method": "simple",

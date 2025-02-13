@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 import random
 import time
+import sys
 np.random.seed(42)
 
 class SubsampledSignal(Signal):
@@ -22,7 +23,7 @@ class SubsampledSignal(Signal):
     It contains the following sub-parameters:
         b : int
         The max dimension of subsampling (i.e., we will subsample functions with b inputs, or equivalently a signal of
-        length q^b)
+        length np.prod(bc) for each bc)
         all_bs : list, (optional)
         List of all the b values that should be subsampled. This is most useful when you want to repeat an experiment
         many times with different values of b to see which is most efficient
@@ -31,13 +32,9 @@ class SubsampledSignal(Signal):
         subsampling_method
             If set to "simple" the M matricies are generated according to the construction in Appendix C, i.e., a
             block-wise identity structure.
-            If set to "complex" the elements of the M matricies are uniformly populated from integers from 0 to q-1.
-            It should be noted that these matricies are not checked to be full rank (w.r.t. the module where arithemtic is
-            over the integer quotient ring), and so it is possible that the actual dimension of subsampling may be
-            lower. For large enough n and b this isn't a problem, since w.h.p. the matricies are full rank.
 
     L : np.array
-    An array that enumerates all q^b q-ary vectors of length b
+    An array that enumerates all np.prod(bc) q-ary vectors of length b
 
     foldername : str
     If set, and the file {foldername}/Ms_and_Ds.pickle exists, the Ms and Ds are read directly from the file.
@@ -74,6 +71,7 @@ class SubsampledSignal(Signal):
         self.num_delays = self.query_args.get("num_delays")
         self.query_method = self.query_args.get("query_method")
         self.noise_sd = kwargs.get("noise_sd")
+        self.n_samples = kwargs.get("n_samples")
     def _init_signal(self):
         if self.subsampling_method == "uniform":
             self._subsample_uniform()
@@ -81,7 +79,8 @@ class SubsampledSignal(Signal):
             self._set_Ms_and_Ds_gfast()
             self._generate_train_subsample()
             self._generate_test_subsample()
-            exit()
+            sys.exit()
+            #exit()
         elif self.subsampling_method == "gfast":
             self._set_Ms_and_Ds_gfast()
             self._subsample_gfast()
@@ -105,7 +104,7 @@ class SubsampledSignal(Signal):
             return True
         else:
             return False
-
+        
     def _set_Ms_and_Ds_gfast(self):
         """
         Sets the values of Ms and Ds, either by loading from folder if exists, otherwise it loaded from query_args
@@ -144,14 +143,15 @@ class SubsampledSignal(Signal):
                 qs_subset = total_qs[len(total_qs) - (i + 1) * self.b : len(total_qs) - i * self.b]
                 self.qs_subset.append(qs_subset)
             elif self.query_method == 'complex':
-                start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
-                end_index = (len(total_qs) - i * self.b) % len(total_qs)
-                if start_index < end_index:
-                    qs_subset = total_qs[start_index:end_index]
-                else:
-                    # This is the wrap-around case
-                    qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
-                self.qs_subset.append(qs_subset)
+                raise NotImplementedError("Complex query method does not work for GFast")
+                # start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
+                # end_index = (len(total_qs) - i * self.b) % len(total_qs)
+                # if start_index < end_index:
+                #     qs_subset = total_qs[start_index:end_index]
+                # else:
+                #     # This is the wrap-around case
+                #     qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
+                # self.qs_subset.append(qs_subset)
             else:
                 raise NotImplementedError("Query method not simple or complex")
             for j in range(len(self.Ds[i])):
@@ -221,13 +221,14 @@ class SubsampledSignal(Signal):
                 if self.train_samples == 'simple':
                     qs_subset = total_qs[len(total_qs) - (i + 1) * self.b : len(total_qs) - i * self.b]
                 elif self.train_samples == 'complex':
-                    start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
-                    end_index = (len(total_qs) - i * self.b) % len(total_qs)
-                    if start_index < end_index:
-                        qs_subset = total_qs[start_index:end_index]
-                    else:
-                        # This is the wrap-around case
-                        qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
+                    raise NotImplementedError("Complex query method does not work for GFast")
+                    # start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
+                    # end_index = (len(total_qs) - i * self.b) % len(total_qs)
+                    # if start_index < end_index:
+                    #     qs_subset = total_qs[start_index:end_index]
+                    # else:
+                    #     # This is the wrap-around case
+                    #     qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
                 sample_file_indices = Path(f"{self.foldername}/samples/M{i}_D{j}_queryindices.pickle")
                 sample_file_qaryindices = Path(f"{self.foldername}/samples/M{i}_D{j}_qaryindices.pickle")
                 if self.foldername and not sample_file_indices.is_file():
@@ -244,7 +245,7 @@ class SubsampledSignal(Signal):
         total_qs = get_qs(self.q, self.n, self.banned_indices)
         test_file_indices = Path(f"{self.foldername}/../test/signal_t_queryindices.pickle")
         test_file_qaryindices = Path(f"{self.foldername}/../test/signal_t_query_qaryindices.pickle")
-        query_indices = self._get_random_query_indices(10000)
+        query_indices = self._get_random_query_indices(self.n_samples)
         save_data4(query_indices, test_file_qaryindices)
         random_samples = np.array(qary_vector_banned(query_indices, total_qs)).T
         save_data4(random_samples, test_file_indices)
@@ -287,7 +288,7 @@ class SubsampledSignal(Signal):
 
     def _get_gfast_query_indices(self, M, D_sub):
         """
-        Gets the indicies to be queried for a given M and D
+        Gets the indicies to be queried for a given M and D, only works for a uniform alphabet size
 
         Parameters
         ----------
@@ -319,6 +320,9 @@ class SubsampledSignal(Signal):
     
 
     def get_gfast_banned_query_indices(self, M, D_sub, qs):
+        '''
+        Gets the indicies to be queried for a given M and D, works for non-uniform alphabet
+        '''
         b = M.shape[1]
         qs_full = get_qs(self.q, self.n, banned_indices= self.banned_indices)
         qs_full = qs_full[:, np.newaxis]
@@ -407,6 +411,10 @@ class SubsampledSignal(Signal):
 
 
     def _compute_subtransform_banned(self, samples, b, qs): 
+        '''
+        Computes each U matrix given some samples and their qs. The number of samples should be np.prod(qs).
+        Note that each U matrix is padded with zeros to make it q^b long (e.g. the max size).
+        '''
         transform = [ftft(row[::(self.q ** (self.b - b))], self.q, self.b, qs) for row in samples]
         transform = np.array(transform, dtype=complex)
         pad_boundary = np.prod(qs)

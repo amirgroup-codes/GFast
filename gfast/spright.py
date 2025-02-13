@@ -77,7 +77,7 @@ class SPRIGHT:
         multitons = []
         if report:
             used = set()
-        if self.delays_method != "nso":
+        if self.delays_method != "nr":
             num_delays = signal.n + 1
         else:
             num_delays = signal.n * int(np.log2(signal.n)) # idk
@@ -277,8 +277,8 @@ if __name__ == "__main__":
         configs = [
             {"query_method" : "simple", "delays_method" : "identity_like", "reconstruct_method" : "mle"},
             {"query_method" : "simple", "delays_method" : "random"       , "reconstruct_method" : "mle"},
-            {"query_method" : "simple", "delays_method" : "nso"          , "reconstruct_method" : "mle"},
-            {"query_method" : "simple", "delays_method" : "nso"          , "reconstruct_method" : "nso"}
+            {"query_method" : "simple", "delays_method" : "nr"          , "reconstruct_method" : "mle"},
+            {"query_method" : "simple", "delays_method" : "nr"          , "reconstruct_method" : "nr"}
         ]
         for config in configs:
             try:

@@ -148,30 +148,3 @@ if __name__ == "__main__":
         noise_sd = noise_sd[min_nmse_ind]
     
     summarize_results(locations, gwht, q, n, b, noise_sd, n_used, r2_value, nmse, avg_hamming_weight, max_hamming_weight, exp_dir, args, qs)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # model_kwargs["noise_sd"] = noise_sd
-    # model_result = helper.compute_model(method="gfast", model_kwargs=model_kwargs, report=True, verbosity=0)
-    # test_kwargs["beta"] = model_result.get("gwht")
-    # nmse, r2_value = helper.test_model("gfast", **test_kwargs)
-    # gwht = model_result.get("gwht")
-    # locations = model_result.get("locations")
-    # n_used = model_result.get("n_samples")
-    # avg_hamming_weight = model_result.get("avg_hamming_weight")
-    # max_hamming_weight = model_result.get("max_hamming_weight")
-    # print(f"R^2: {r2_value}, NMSE: {nmse}")

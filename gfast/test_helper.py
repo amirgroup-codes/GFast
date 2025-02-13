@@ -44,7 +44,7 @@ class TestHelper:
         signal_args = self.signal_args.copy()
         query_args = self.subsampling_args.copy()
         query_args.update({
-            #KUNAL: I changed query method to simple and delays method channel from nso to identity
+            #KUNAL: I changed query method to simple and delays method channel from nr to identity
             #also changing subsampling method from gfast to input from query args
             "subsampling_method": query_args["query_method"],
             "query_method": query_args["query_method"],
@@ -63,7 +63,7 @@ class TestHelper:
             "subsampling_method": "gfast",
             "query_method": "complex",
             "delays_method_source": "coded",
-            "delays_method_channel": "nso",
+            "delays_method_channel": "nr",
             "t": signal_args["t"]
         })
         signal_args["folder"] = self.exp_dir / "train_coded"
@@ -147,10 +147,10 @@ class TestHelper:
         """
         if verbosity >= 1:
             print("Estimating GWHT coefficients with GFAST")
-        gfast = GFAST( #KUNAL: changed reconstruct method channel from nso to identity
-            #Changed back to nso for tiger
+        gfast = GFAST( #KUNAL: changed reconstruct method channel from nr to identity
+            #Changed back to nr for tiger
             reconstruct_method_source="identity",
-            reconstruct_method_channel=self.subsampling_args["delays_method_channel"], #CHANGED TO IDENTITY FOR NSO EXPERIMENTS, REMEMBER TO FIX THIS!!!!!!!
+            reconstruct_method_channel=self.subsampling_args["delays_method_channel"], #CHANGED TO IDENTITY FOR nr EXPERIMENTS, REMEMBER TO FIX THIS!!!!!!!
             num_subsample=model_kwargs["num_subsample"],
             num_repeat=model_kwargs["num_repeat"],
             b=model_kwargs["b"]
@@ -172,7 +172,7 @@ class TestHelper:
         decoder = get_reed_solomon_dec(self.signal_args["n"], self.signal_args["t"], self.signal_args["q"])
         gfast = GFAST(
             reconstruct_method_source="coded",
-            reconstruct_method_channel="nso",
+            reconstruct_method_channel="nr",
             num_subsample=model_kwargs["num_subsample"],
             num_repeat=model_kwargs["num_repeat"],
             b=model_kwargs["b"],
@@ -195,7 +195,7 @@ class TestHelper:
             print("Estimating GWHT coefficients with GFAST")
         gfast = GFAST(
             reconstruct_method_source="identity",
-            reconstruct_method_channel="nso",
+            reconstruct_method_channel="nr",
             num_subsample=model_kwargs["num_subsample"],
             num_repeat=max(1, model_kwargs["num_repeat"] // factor),
             b=factor * model_kwargs["b"],
@@ -294,7 +294,6 @@ class TestHelper:
         """
         if len(beta.keys()) > 0:
             test_signal = self.test_signal.signal_t
-            # print("Test signal", test_signal)
             qs = get_qs(self.q, self.n, banned_indices=self.test_signal.banned_indices)
             (sample_idx_dec, samples) = list(test_signal.keys()), list(test_signal.values())
             # print("SAMPLES/QS", qs, samples)

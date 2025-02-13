@@ -22,6 +22,7 @@ GFast functions
 def ftft(x, q, n, qs = None):
     '''
     Returns FFT of input signal x with alphabet size at each site stored in qs.
+    If no qs is passed, it defaults to [q] * n
     '''
     if qs is None:
         qs = get_qs(q, n)
@@ -52,7 +53,6 @@ def itft_tensored(x, q, n, qs = None):
     if qs is None:
         qs = get_qs(q,n)
     signal_length = np.prod(qs)
-    #return fft.ifftn(x)
     return fft.ifftn(x) * signal_length
 
 
@@ -70,17 +70,12 @@ def get_qs(q_max, n, banned_indices={}):
     '''
     Returns the alphabet size (qs) for each site (n) in the sequence. 
     Returns length n vector of only qs if banned_indices arg is left blank.
+    eg: banned_indices = {0:[1, 2, 3]} with q = 4 and n = 4 returns [1, 4, 4, 4]
     '''
     qs = np.repeat(q_max, n)
     for key, value in banned_indices.items():
         qs[key] -= len(value) 
     return qs
-
-
-def qary_single_to_dec(x, q):
-    n = x.size
-    decimal_value = np.sum(x * (q ** np.arange(n - 1, -1, -1)))
-    return int(decimal_value)
 
 
 def get_signature(q, n, D, k, banned_indices = {}):
@@ -99,20 +94,8 @@ def get_signature(q, n, D, k, banned_indices = {}):
     return signature_banned
 
 
-# def qary_vector_banned(x, qs):
-#     '''
-#     Returns the qary vector of input x with alphabet size at each site stored in qs.
-#     Equivalent to dec_to_qary_vec(x, q) for constant qs
-#     '''
-#     result = []
-#     for q in reversed(qs):
-#         result.append(x % q)
-#         x //= q
-#     return tuple(reversed(result))
-
-
 def qary_vector_banned(x, qs):
-    """
+    '''
     Converts an array of numbers x into their mixed-radix representations
     using the bases provided in qs. This version supports large numbers in x.
 
@@ -122,20 +105,19 @@ def qary_vector_banned(x, qs):
 
     Returns:
     - A NumPy array of shape (len(x), len(qs)) representing the mixed-radix vectors.
-    """
-    x = np.asarray(x, dtype=object)  # Ensure large number support
+    '''
+    x = np.asarray(x, dtype=object) 
     result = []
-
-    # Compute mixed-radix representation
     for q in reversed(qs):
-        remainder = x % q  # Get the remainder for the current base
+        remainder = x % q 
         result.append(remainder)
-        x //= q  # Update x for the next base
-
-    # Reverse and stack results to get the final mixed-radix representation
-    return np.array(result[::-1]).T  # Transpose to align with the input size
+        x //= q 
+    return np.array(result[::-1]).T  
 
 def calculate_index(values, dims):
+        '''
+        Base function used in both decimal_banned and find_matrix_indices
+        '''
         index = 0
         multiplier = 1
         for i in range(len(dims)-1, -1, -1):
@@ -153,6 +135,9 @@ def decimal_banned(x, qs):
 
 
 def find_matrix_indices(x, qs):
+    '''
+    Does the same thing as decimal_banned over a matrix x
+    '''
     indices = [calculate_index(col, qs) for col in x.T]
     return indices
 
@@ -169,6 +154,79 @@ def banned_random(b, qs):
     print(qs, M)
     return M
 
+def get_qs_from_delta(delta, q, n):
+    '''
+    Useful for creating plots: gives alphabet from change in qs (done uniformly across qs)
+    Example: delta = 3, q = 4, n = 4, this returns np.array([3, 3, 3, 4])
+    '''
+    qs = np.array([q] * n)
+    threshold = (n-1) * (q-1)
+    if (threshold < delta):
+        raise ValueError("delta is too big")
+    while delta > 0:
+        for i in range(1, len(qs)):
+            if delta == 0:
+                break
+            if qs[i] > 1:
+                qs[i] -= 1
+                delta -=1
+    return qs
+
+def get_banned_indices_from_qs(qs, q):
+    '''
+    Given an array qs returns the banned indices dictionary.
+    eg: qs = [1, 4, 4, 4] returns {0: [1, 2, 3]}
+    '''
+    delta_dict = {}
+    for i, val in enumerate(qs):
+        delta = q - val
+        if not (delta):
+            continue
+        else:
+            delta_dict[i] = sorted([(q - j-1) for j in range(delta)])
+    return delta_dict
+
+def get_qs_from_delta_random(delta, q, n):
+    '''
+    Removes delta number of alphabets from a qs vector np.array([q] * n) randomly 
+    '''
+    qs = np.array([q] * n)
+    threshold = (n-1) * (q)
+    if (threshold <= delta):
+        raise ValueError("delta is too big")
+    while delta>0:
+        random_idx = np.random.randint(0, n)
+        if qs[random_idx] > 1:
+            qs[random_idx] -= 1
+            delta -= 1
+    return qs
+
+def get_qs_from_delta_sitewise(delta, q, n):
+    '''
+    Removes delta alphabets from a qs vector np.array([q] * n) in a site-wise manner
+    Example: delta = 3, q = 4, n = 4, this returns np.array([2, 3, 4, 4])
+    '''
+    qs = np.array([q] * n)
+    i = 0
+    while delta > 0 and i < n:
+        while qs[i] > 2 and delta > 0:
+            qs[i] -= 1
+            delta -= 1
+        i += 1
+    
+    return qs
+
+def calculate_samples(qs, num_subsample, b, num_repeat):
+    '''
+    Calculates the number of samples used for GFast given a set of qs, num_subsample, b, and num_repeat.
+    Returns:
+    int: The sum of the subsampled products.
+    '''
+    P = (num_repeat * len(qs)) + 1
+    sum = 0
+    for i in range(num_subsample):
+        sum += P * int(np.prod(qs[len(qs) - (i + 1) * b : len(qs) - i * b]))
+    return sum
 
 """
 Base q-SFT functions

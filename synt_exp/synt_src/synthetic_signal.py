@@ -83,7 +83,7 @@ def generate_signal_w(n, q, sparsity, a_min, a_max, noise_sd=0, full=True, max_w
 
 def get_random_signal(n, q, noise_sd, sparsity, a_min, a_max, banned_indices = {}, banned_indices_toggle = False):
     """
-    Computes a full random time-domain signal, which is sparse in the fequency domain. This function is only suitable for
+    Computes a full random time-domain signal, which is sparse in the frequency domain. This function is only suitable for
     small n since for large n, storing all q^n symbols is not tractable.
     """
     if banned_indices_toggle:

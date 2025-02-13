@@ -107,46 +107,15 @@ def singleton_detection_mle(U_slice, **kwargs):
     return dec_to_qary_vec(selection[k_sel], q, n)
 
 
-def singleton_detection_nso(U_slice, **kwargs):
-    """
-    Singleton Detection Via NSO Algorithm
-    nso1 - Multiplying by conjugate "Soft Decoding"
-    nso2 - Quantized angle "Hard Decoding"
-    """
-    nso_type = kwargs.get("nso_subtype", "nso1")
-    banned_indices_toggle = kwargs.get("banned_indices_toggle")
-    if nso_type == "nso1":
-        if banned_indices_toggle:
-            return singleton_detection_nso1_banned(U_slice, **kwargs)
-        return singleton_detection_nso1(U_slice, **kwargs)
-    elif nso_type == "nso2":
-        if banned_indices_toggle:
-            return singleton_detection_nso2_banned(U_slice, **kwargs)
-        return singleton_detection_nso2(U_slice, **kwargs)
 
-
-def singleton_detection_nso1(U_slice, **kwargs):
-    """
-    Soft Decoding NSO algorithm
-    """
-    q, p1 = kwargs.get("q"), kwargs.get("source_parity")
-    q_roots = 2 * np.pi / q * np.arange(q + 1)
-    U_slice_zero = U_slice[0::p1]
-    k_sel_qary = np.zeros((p1-1, ), dtype=int)
-    for i in range(1, p1):
-        U_slice_i = U_slice[i::p1]
-        angle = np.angle(np.mean(U_slice_zero * np.conjugate(U_slice_i))) % (2 * np.pi)
-        idx = (np.abs(q_roots - angle)).argmin() % q
-        k_sel_qary[i-1] = idx
-    return k_sel_qary
-
-
-def singleton_detection_nso1_banned(U_slice, **kwargs):
+def singleton_detection_nr(U_slice, **kwargs):
     """
     Assumes p1 is the default n+1, which is also the source parity (#rows in D matrix)
     """
     q_max, p1 = kwargs.get("q"), kwargs.get("source_parity")
     banned_indices = kwargs.get('banned_indices')
+    if banned_indices is None:
+        banned_indices = {}
     qs = get_qs(q_max, p1-1, banned_indices=banned_indices)
     angles = [2 * np.pi / q * np.arange(q + 1) for q in qs]
     U_slice_zero = U_slice[0::p1]
@@ -158,42 +127,6 @@ def singleton_detection_nso1_banned(U_slice, **kwargs):
         k_sel_qary[i-1] = idx
     return k_sel_qary
 
-
-def singleton_detection_nso2(U_slice, **kwargs):
-    """
-    Hard Decoding NSO Algorithm
-    """
-    q, p1 = kwargs.get("q"), kwargs.get("source_parity")
-    U_slice_zero = U_slice[0::p1]
-    angle_0 = angle_q(U_slice_zero, q)
-    k_sel_qary = np.zeros((p1-1, ), dtype=int)
-    for i in range(1, p1):
-        U_slice_i = U_slice[i::p1]
-        angle = angle_q(U_slice_i, q)
-        idx = np.round(np.mean((angle_0 - angle) % q)) % q
-        k_sel_qary[i-1] = idx
-    return k_sel_qary
-
-
-def singleton_detection_nso2_banned(U_slice, **kwargs):
-    """
-    Assumes p1 is the default n+1, which is also the source parity (#rows in D matrix)
-    """
-    print('u slice shape:', np.shape(U_slice))
-    q_max, p1 = kwargs.get("q"), kwargs.get("source_parity")
-    banned_indices = kwargs.get("banned_indices")
-    qs = get_qs(q_max, p1-1, banned_indices=banned_indices)
-    U_slice_zero = U_slice[0::p1]
-    print('u slice 0 shape:', np.shape(U_slice_zero))
-    angle_0 = angle_q(U_slice_zero, q_max)
-    k_sel_qary = np.zeros((p1-1, ), dtype=int)
-    for i in range(1, p1):
-        U_slice_i = U_slice[i::p1]
-        print(f'u slice {i} shape:', np.shape(U_slice_i))
-        angle = angle_q(U_slice_i, qs[i-1])
-        idx = np.round(np.mean((angle_0 - angle) % qs[i-1])) % qs[i-1]
-        k_sel_qary[i-1] = idx
-    return k_sel_qary
 
 
 def singleton_detection(U_slice, method_source="identity", method_channel="identity", **kwargs):
@@ -214,7 +147,7 @@ def singleton_detection(U_slice, method_source="identity", method_channel="ident
     method_channel
     Method of reconstruction for channel coding: "mle" - exact MLE computation. Fine for small problems but not
                                                          recommended it is exponential in n
-                                                 "nso" - symbol-wise recovery suitable when a repetition type code is used
+                                                 "nr" - symbol-wise recovery suitable when a repetition type code is used
                                                  "identity" - no channel coding, only use when there is no noise
 
     Returns
@@ -224,7 +157,7 @@ def singleton_detection(U_slice, method_source="identity", method_channel="ident
     # Split detection into two phases, channel and source decoding
     k = {
         "mle": singleton_detection_mle,
-        "nso": singleton_detection_nso,
+        "nr": singleton_detection_nr,
         "identity": singleton_detection_noiseless,
     }.get(method_channel)(U_slice, **kwargs)
     
