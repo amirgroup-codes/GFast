@@ -184,9 +184,10 @@ class SyntheticSubsampledSignal(SubsampledSignal):
         """
         np.random.seed(42) # Defined twice so multiple calls of the function will use the same noise
         mdu = super().get_MDU(ret_num_subsample, ret_num_repeat, b, trans_times)
+        if len(mdu[2]) != ret_num_subsample:
+            ret_num_subsample += 1
         for i in range(len(mdu[2])):
             for j in range(len(mdu[2][i])):
-                
                 if self.banned_indices_toggle:
                     nu = self.noise_sd / np.sqrt(2 * np.prod(self.qs_subset[ret_num_subsample - i - 1]))
                     # Account for zero-padding

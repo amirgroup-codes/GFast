@@ -79,8 +79,7 @@ class SubsampledSignal(Signal):
             self._set_Ms_and_Ds_gfast()
             self._generate_train_subsample()
             self._generate_test_subsample()
-            sys.exit()
-            #exit()
+            raise ScriptExit()
         elif self.subsampling_method == "gfast":
             self._set_Ms_and_Ds_gfast()
             self._subsample_gfast()
@@ -115,7 +114,11 @@ class SubsampledSignal(Signal):
             if Ms_and_Ds_path.is_file():
                 self.Ms, self.Ds = load_data(Ms_and_Ds_path)
             else:
-                self.Ms, self.Ds = get_Ms_and_Ds(self.n, self.q, **self.query_args)
+                if self.banned_indices_toggle:
+                    qs = get_qs(self.q, self.n, banned_indices=self.banned_indices)
+                    self.Ms, self.Ds = get_Ms_and_Ds(self.n, self.q, qs=qs, **self.query_args)
+                else:    
+                    self.Ms, self.Ds = get_Ms_and_Ds(self.n, self.q, **self.query_args)
                 save_data((self.Ms, self.Ds), f"{self.foldername}/Ms_and_Ds.pickle")
         else:
             if self.banned_indices_toggle:
@@ -139,11 +142,10 @@ class SubsampledSignal(Signal):
         total_qs = get_qs(self.q, self.n, self.banned_indices)
         pbar = tqdm(total=0, position=0)
         for i in range(len(self.Ms)):
-            if self.query_method == 'simple':
-                qs_subset = total_qs[len(total_qs) - (i + 1) * self.b : len(total_qs) - i * self.b]
-                self.qs_subset.append(qs_subset)
-            elif self.query_method == 'complex':
-                raise NotImplementedError("Complex query method does not work for GFast")
+            if self.query_method == "simple" or "complex" or "permuted":
+                nonzero_rows = np.nonzero(self.Ms[i].sum(axis=1))[0]
+                qs_subset = total_qs[nonzero_rows]
+                # print("QS", qs_subset)
                 # start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
                 # end_index = (len(total_qs) - i * self.b) % len(total_qs)
                 # if start_index < end_index:
@@ -151,7 +153,7 @@ class SubsampledSignal(Signal):
                 # else:
                 #     # This is the wrap-around case
                 #     qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
-                # self.qs_subset.append(qs_subset)
+                self.qs_subset.append(qs_subset)
             else:
                 raise NotImplementedError("Query method not simple or complex")
             for j in range(len(self.Ds[i])):
@@ -218,17 +220,9 @@ class SubsampledSignal(Signal):
         """
         for i in range(len(self.Ms)):
             for j in range(len(self.Ds[i])):
-                if self.train_samples == 'simple':
-                    qs_subset = total_qs[len(total_qs) - (i + 1) * self.b : len(total_qs) - i * self.b]
-                elif self.train_samples == 'complex':
-                    raise NotImplementedError("Complex query method does not work for GFast")
-                    # start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
-                    # end_index = (len(total_qs) - i * self.b) % len(total_qs)
-                    # if start_index < end_index:
-                    #     qs_subset = total_qs[start_index:end_index]
-                    # else:
-                    #     # This is the wrap-around case
-                    #     qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
+                # if self.train_samples == 'simple':
+                nonzero_rows = np.nonzero(self.Ms[i].sum(axis=1))[0]
+                qs_subset = total_qs[nonzero_rows]
                 sample_file_indices = Path(f"{self.foldername}/samples/M{i}_D{j}_queryindices.pickle")
                 sample_file_qaryindices = Path(f"{self.foldername}/samples/M{i}_D{j}_qaryindices.pickle")
                 if self.foldername and not sample_file_indices.is_file():
@@ -236,6 +230,26 @@ class SubsampledSignal(Signal):
                     random_samples = np.array(qary_vector_banned(query_indices, total_qs))
                     save_data4(random_samples, sample_file_indices)
                     save_data4(query_indices, sample_file_qaryindices)
+        # for i in range(len(self.Ms)):
+        #     for j in range(len(self.Ds[i])):
+        #         if self.train_samples == 'simple':
+        #             qs_subset = total_qs[len(total_qs) - (i + 1) * self.b : len(total_qs) - i * self.b]
+        #         elif self.train_samples == 'complex':
+        #             raise NotImplementedError("Complex query method does not work for GFast")
+        #             # start_index = (len(total_qs) - (i + 1) * self.b) % len(total_qs) 
+        #             # end_index = (len(total_qs) - i * self.b) % len(total_qs)
+        #             # if start_index < end_index:
+        #             #     qs_subset = total_qs[start_index:end_index]
+        #             # else:
+        #             #     # This is the wrap-around case
+        #             #     qs_subset = np.concatenate((total_qs[start_index:], total_qs[:end_index]))
+        #         sample_file_indices = Path(f"{self.foldername}/samples/M{i}_D{j}_queryindices.pickle")
+        #         sample_file_qaryindices = Path(f"{self.foldername}/samples/M{i}_D{j}_qaryindices.pickle")
+        #         if self.foldername and not sample_file_indices.is_file():
+        #             query_indices = self.get_gfast_banned_query_indices(self.Ms[i], self.Ds[i][j], qs_subset)
+        #             random_samples = np.array(qary_vector_banned(query_indices, total_qs))
+        #             save_data4(random_samples, sample_file_indices)
+        #             save_data4(query_indices, sample_file_qaryindices)
 
 
     def _generate_test_subsample(self):
@@ -380,15 +394,20 @@ class SubsampledSignal(Signal):
         Ds_ret
         Us_ret
         """
+        if len(self.Ms) > self.num_subsample:
+            num_subsample = self.num_subsample + 1
+            ret_num_subsample = self.num_subsample + 1
+        else:
+            num_subsample = self.num_subsample
         Ms_ret = []
         Ds_ret = []
         Us_ret = []
         Ts_ret = []
-        if ret_num_subsample <= self.num_subsample and ret_num_repeat <= self.num_repeat and b <= self.b:
-            subsample_idx = np.random.choice(self.num_subsample, ret_num_subsample, replace=False)
+        if ret_num_subsample <= num_subsample and ret_num_repeat <= self.num_repeat and b <= self.b:
+            subsample_idx = np.random.choice(num_subsample, ret_num_subsample, replace=False)
             delay_idx = np.random.choice(self.num_repeat, ret_num_repeat, replace=False)
             for i in subsample_idx:
-                Ms_ret.append(self.Ms[i][:, :b])
+                Ms_ret.append(self.Ms[i])
                 Ds_ret.append([])
                 Us_ret.append([])
                 Ts_ret.append([])
@@ -426,3 +445,6 @@ class SubsampledSignal(Signal):
 
     def get_source_parity(self):
         return self.Ds[0][0].shape[0]
+
+class ScriptExit(Exception):
+    pass

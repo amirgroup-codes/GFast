@@ -17,6 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("--banned_indices_path", type=str, required=False)
     parser.add_argument("--banned_indices_toggle", type=str, required=True)
     parser.add_argument("--delays_method_channel", type=str, required=False)
+    parser.add_argument("--query_method", type=str, required=False, default='simple')
 
     args = parser.parse_args()
     if args.delays_method_channel:
@@ -32,13 +33,14 @@ if __name__ == "__main__":
     exp_dir.mkdir(parents=True, exist_ok=True)
     query_args = {
         "query_method": 'generate_samples',
-        "train_samples": 'simple',
+        "train_samples": args.query_method,
         "method": "generate_samples",
         "num_subsample": args.num_subsample,
         "num_repeat": args.num_repeat,
         "b": args.b,
         "folder": exp_dir,
-        "delays_method_channel": delays_method_channel
+        "delays_method_channel": delays_method_channel,
+        "autocomplete": True
     }
     signal_args = {
         "n":args.n,

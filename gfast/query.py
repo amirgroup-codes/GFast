@@ -10,7 +10,18 @@ import numpy as np
 from gfast.utils import fwht, gwht, bin_to_dec, binary_ints, qary_ints, get_qs, banned_random
 
 
-def get_Ms_simple(n, b, q, num_to_get=None):
+# def get_Ms_simple(n, b, q, num_to_get=None):
+#     '''
+#     Sets Ms[0] = [I 0 ...], Ms[1] = [0 I ...], Ms[2] = [0 0 I 0 ...] and so forth. See get_Ms for full signature.
+#     '''
+#     Ms = []
+#     for i in range(num_to_get - 1, -1, -1):
+#         M = np.zeros((n, b), dtype=np.int32)
+#         M[(b * i) : (b * (i + 1)), :] = np.eye(b) 
+#         Ms.append(M)
+#     return Ms
+
+def get_Ms_simple(n, b, q, autocomplete = False, num_to_get=None):
     '''
     Sets Ms[0] = [I 0 ...], Ms[1] = [0 I ...], Ms[2] = [0 0 I 0 ...] and so forth. See get_Ms for full signature.
     '''
@@ -19,6 +30,12 @@ def get_Ms_simple(n, b, q, num_to_get=None):
         M = np.zeros((n, b), dtype=np.int32)
         M[(b * i) : (b * (i + 1)), :] = np.eye(b) 
         Ms.append(M)
+    if autocomplete:
+        last_b = n - b * num_to_get
+        if last_b > 0:
+            M = np.zeros((n, last_b), dtype=np.int32)
+            M[n - last_b: n, 0:last_b] = np.eye(last_b)
+            Ms.append(M)
     return Ms
 
 
@@ -50,7 +67,7 @@ def get_Ms_complex_banned(b, qs, num_to_get=None):
     return Ms
 
 
-def get_Ms(n, b, q, qs=None, num_to_get=None, method="simple"):
+def get_Ms(n, b, q, qs=None, num_to_get=None, method="simple", autocomplete=False):
     '''
     Gets subsampling matrices for different sparsity levels.
 
@@ -76,14 +93,16 @@ def get_Ms(n, b, q, qs=None, num_to_get=None, method="simple"):
     if num_to_get is None:
         num_to_get = max(n // b, 3)
 
-    if method == "simple" and num_to_get > n // b:
+    if method == "simple" and num_to_get > n // b and not autocomplete:
         raise ValueError("When query_method is 'simple', the number of M matrices to return cannot be larger than n // b")
-    if qs is not None and method == 'complex':
-        return get_Ms_complex_banned(b, qs, num_to_get=num_to_get)
-    return {
-        "simple": get_Ms_simple,
-        "complex": get_Ms_complex
-    }.get(method)(n, b, q, num_to_get)
+    # if qs is not None and method == 'complex':
+    #     return get_Ms_complex_banned(b, qs, num_to_get=num_to_get)
+    if method == "simple":
+        return get_Ms_simple(n, b, q, autocomplete=autocomplete, num_to_get=num_to_get)
+    elif method == "complex":
+        return get_Ms_complex(n, b, q, qs, autocomplete=autocomplete,num_to_get=num_to_get)
+    elif method == "permuted":
+        return get_Ms_permuted(n, b, q, qs, autocomplete=autocomplete, num_to_get=num_to_get)
 
 
 def get_D_identity(n, **kwargs):
@@ -200,6 +219,20 @@ def subsample_indices(M, d):
     inds_binary = np.mod(np.dot(M, L).T + d, 2).T
     return bin_to_dec(inds_binary)
 
+def get_Ms_permuted(n, b, q, qs, autocomplete=False, num_to_get=None):
+    simple_Ms = get_Ms_simple(n, b, q, autocomplete=autocomplete, num_to_get=num_to_get)
+    descending_indices = np.argsort(qs)[::-1]
+    current_index = 0
+    Ms_permuted = []
+    for M in simple_Ms:
+        b_current = M.shape[1]
+        selected_indices = descending_indices[current_index:current_index + b_current]
+        current_index += b_current
+        new_M = np.zeros((n, b_current), dtype=int)
+        for j, idx in enumerate(selected_indices):
+            new_M[idx, j] = 1
+        Ms_permuted.append(new_M)
+    return Ms_permuted
 
 def compute_delayed_gwht(signal, M, D, q):
     """
@@ -226,9 +259,10 @@ def get_Ms_and_Ds(n, q, qs=None, **kwargs):
         query_method = kwargs.get("train_samples")
     else:
         query_method = kwargs.get("query_method")
+    autocomplete = kwargs.get("autocomplete", False)
     b = kwargs.get("b")
     num_subsample = kwargs.get("num_subsample")
-    Ms = get_Ms(n, b, q, qs=qs, method=query_method, num_to_get=num_subsample)
+    Ms = get_Ms(n, b, q, qs=qs, method=query_method, num_to_get=num_subsample, autocomplete=autocomplete)
     if timing_verbose:
         print(f"M Generation:{time.time() - start_time}")
     Ds = []

@@ -108,16 +108,16 @@ class GFAST:
         else:
             peeling_max = q ** n
         peeled = set([])
-        if isinstance(signal, SubsampledSignal):
-            Ms, Ds, Us, Ts, subsample_idx = signal.get_MDU(self.num_subsample, self.num_repeat, self.b, trans_times=True)
-            if signal.banned_indices_toggle:
-                qs_subset = signal.qs_subset
-                qs_new = []
-                for val in subsample_idx:
-                    qs_new.append(qs_subset[val])
-                qs_subset = qs_new.copy()
-        else:
-            raise NotImplementedError("GFAST currently only supports signals that inherit from SubsampledSignal")
+        # if isinstance(signal, SubsampledSignal):
+        Ms, Ds, Us, Ts, subsample_idx = signal.get_MDU(self.num_subsample, self.num_repeat, self.b, trans_times=True)
+        if signal.banned_indices_toggle:
+            qs_subset = signal.qs_subset
+            qs_new = []
+            for val in subsample_idx:
+                qs_new.append(qs_subset[val])
+            qs_subset = qs_new.copy()
+        # else:
+        #     raise NotImplementedError("GFAST currently only supports signals that inherit from SubsampledSignal")
         for i in range(len(Ds)):
             Us[i] = np.vstack(Us[i])
             Ds[i] = np.vstack(Ds[i])

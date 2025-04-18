@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--delays_method_source", type=str, required=False, default="identity")
     parser.add_argument("--delays_method_channel", type=str, required=False, default="identity")
     parser.add_argument("--hyperparam", type=str, required=False, default=False)
+    parser.add_argument("--query_method", type=str, required=False, default='simple')
 
 
     args = parser.parse_args()
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     noise_sd = 0.1
 
     query_args = {
-        "query_method": "simple",
+        "query_method": args.query_method,
         "num_subsample": num_subsample,
         "delays_method_source": delays_method_source,
         "subsampling_method": "gfast",

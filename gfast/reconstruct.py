@@ -9,7 +9,7 @@ import numpy as np
 from gfast.utils import angle_q, dec_to_qary_vec, get_qs, qary_vector_banned
 
 
-def singleton_detection_noiseless(U_slice, **kwargs): #kunal change this later!
+def singleton_detection_noiseless(U_slice, **kwargs): 
     '''
     Finds the true index of a singleton, or the best-approximation singleton of a multiton.
     Assumes P = n + 1 and D = [0; I].

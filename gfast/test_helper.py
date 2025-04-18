@@ -44,8 +44,6 @@ class TestHelper:
         signal_args = self.signal_args.copy()
         query_args = self.subsampling_args.copy()
         query_args.update({
-            #KUNAL: I changed query method to simple and delays method channel from nr to identity
-            #also changing subsampling method from gfast to input from query args
             "subsampling_method": query_args["query_method"],
             "query_method": query_args["query_method"],
             "delays_method_source": "identity",
@@ -147,8 +145,7 @@ class TestHelper:
         """
         if verbosity >= 1:
             print("Estimating GWHT coefficients with GFAST")
-        gfast = GFAST( #KUNAL: changed reconstruct method channel from nr to identity
-            #Changed back to nr for tiger
+        gfast = GFAST( 
             reconstruct_method_source="identity",
             reconstruct_method_channel=self.subsampling_args["delays_method_channel"], #CHANGED TO IDENTITY FOR nr EXPERIMENTS, REMEMBER TO FIX THIS!!!!!!!
             num_subsample=model_kwargs["num_subsample"],

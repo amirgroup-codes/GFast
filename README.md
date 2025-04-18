@@ -12,6 +12,10 @@ For an overview of GFast, as well as how to run the algorithm for your own funct
 
 **gfast/:** GFast module for generalized $q$-ary functions.
 
+**tabular_exp/:** Code needed to run NR-GFast for the multi-layer perceptron (MLP) trained on the heart disease dataset found [here](https://archive.ics.uci.edu/dataset/45/heart+disease). More information has been left in the folder.
+
+**tabular_results/:** Folder containing the results of the heart disease experiments.
+
 **gfp_exp/:** Code needed to run NR-GFast for the multi-layer perceptron (MLP) trained on the avGFP protein found in [this paper](https://www.nature.com/articles/nature17995). More information has been left in the folder.
 
 **gfp_results/:** Folder containing the results of the GFP experiments.

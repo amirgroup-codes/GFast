@@ -15,6 +15,9 @@ import pickle
 import json
 import matplotlib.pyplot as plt
 from itertools import product
+from math import floor
+random.seed(42)
+np.random.seed(42)
 
 """
 GFast functions
@@ -88,7 +91,7 @@ def get_signature(q, n, D, k, banned_indices = {}):
     signature_banned = np.zeros(np.shape(D)[0], dtype=complex)
     for i in range(np.shape(D)[0]):
         row = D[i,:]
-        dcp = np.multiply(row, np.ravel(k)) % qs #KUNAL; might need to add mod q here
+        dcp = np.multiply(row, np.ravel(k)) % qs 
         omega_row = omegas ** dcp
         signature_banned[i] = np.prod(omega_row)
     return signature_banned
@@ -228,6 +231,39 @@ def calculate_samples(qs, num_subsample, b, num_repeat):
         sum += P * int(np.prod(qs[len(qs) - (i + 1) * b : len(qs) - i * b]))
     return sum
 
+def get_random_test_samples(q, n, banned_indices, num_samples=10000):
+    total_qs = get_qs(q, n, banned_indices)
+    N = np.prod(total_qs)
+    base_inds_dec = [floor(random.uniform(0, 1) * N) for _ in range(num_samples)]
+    query_indices = np.unique(np.array(base_inds_dec, dtype=object))
+    random_samples = np.array(qary_vector_banned(query_indices, total_qs)).T
+    return random_samples
+
+
+def test_nmse(test_set, y, gwht, q, n, exp_dir, banned_indices={}):
+    if len(gwht.keys()) > 0:
+        batch_size = 10000
+        beta_keys = list(gwht.keys())
+        beta_values = list(gwht.values())
+        y_hat = []
+        test_set = test_set.T
+
+        for i in range(0, test_set.shape[0], batch_size):
+            sample_batch = test_set[i:i + batch_size, :]
+            H = np.empty((np.shape(sample_batch)[0], np.shape(beta_keys)[0]), dtype=complex)
+            for i, k in enumerate(np.array(beta_keys)):
+                signature = get_signature(q, n, sample_batch, k, banned_indices=banned_indices)
+                H[:, i] = signature.T
+            y_hat.append(H @ np.array(beta_values))
+        y_hat = np.concatenate(y_hat)
+
+        # Subtract sample mean from new test set
+        mean = np.load(f'{exp_dir}/train/samples/train_mean.npy')
+        y = y - mean
+
+        nmse = np.linalg.norm(y_hat - y) ** 2 / np.linalg.norm(y) ** 2
+        return nmse
+    
 """
 Base q-SFT functions
 """
@@ -501,11 +537,7 @@ def summarize_results(locations, gwht, q, n, b, noise_sd, n_used, r2_value, nmse
         sum_squares = calculate_fourier_magnitudes(locations, gwht)
         plot_interaction_magnitudes(sum_squares, q, n, b, folder, args)
 
-    if hasattr(args, 'param'):
-        param_path = args.param.replace('/', '_')
-        file_path = 'helper_results_{}.txt'.format(param_path)
-    else:
-        file_path = 'helper_results.txt'
+    file_path = 'helper_results.txt'
 
     results_file = folder / file_path
     write_results_to_file(results_file, q, n, b, noise_sd, n_used, r2_value, nmse, avg_hamming_weight, max_hamming_weight, qs)
@@ -582,36 +614,3 @@ def test_nmse(test_set, y, gwht, q, n, exp_dir, banned_indices={}):
 
         nmse = np.linalg.norm(y_hat - y) ** 2 / np.linalg.norm(y) ** 2
         return nmse
-
-
-    
-    # if len(beta.keys()) > 0:
-    #         test_signal = self.test_signal.signal_t
-    #         # print("Test signal", test_signal)
-    #         qs = get_qs(self.q, self.n, banned_indices=self.test_signal.banned_indices)
-    #         (sample_idx_dec, samples) = list(test_signal.keys()), list(test_signal.values())
-    #         # print("SAMPLES/QS", qs, samples)
-    #         batch_size = 10000
-    #         beta_keys = list(beta.keys())
-    #         beta_values = list(beta.values())
-    #         y_hat = []
-
-    #         for i in range(0, len(sample_idx_dec), batch_size):
-    #             sample_idx_dec_batch = sample_idx_dec[i:i + batch_size]
-    #             sample_idx_batch = np.array([qary_vector_banned(x, qs) for x in sample_idx_dec_batch])
-    #             H = np.empty((np.shape(sample_idx_batch)[0], np.shape(beta_keys)[0]), dtype=complex)
-    #             for i, k in enumerate(np.array(beta_keys)):
-    #                 signature = get_signature(self.q, self.n, sample_idx_batch, k, banned_indices=self.test_signal.banned_indices)
-    #                 H[:, i] = signature.T
-    #             y_hat.append(H @ np.array(beta_values))
-    #         y_hat = np.concatenate(y_hat)
-    #         nmse = np.linalg.norm(y_hat - samples) ** 2 / np.linalg.norm(samples) ** 2
-    #         r2 = r2_score(np.real(y_hat), np.real(samples))
-    #         # print(f"NMSE: {nmse}, R2: {r2}")
-    #         import matplotlib.pyplot as plt
-    #         plt.figure()
-    #         plt.plot(np.real(y_hat), np.real(samples))
-    #         plt.savefig('/usr/scratch/dtsui/FinalizedCodes/gfast/gfp_results/q20_n12_nso_0.012/test.png')
-    #         return nmse, r2
-    #     else:
-    #         return 1, -1

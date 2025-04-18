@@ -9,13 +9,11 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 from pathlib import Path
-from math import floor
 import itertools
 import subprocess
 from src.helper import Helper
-from gfp_utils import read_fasta, select_aas, convert_encoding, aa_indices, sample_model, one_hot_encode, load_model, get_random_test_samples, qary_to_aa_encoding
-from gfast.plot_utils import calculate_samples
-from gfast.utils import load_data, save_data, get_qs, summarize_results, process_stdout, qary_vector_banned, dec_to_qary_vec, save_data4, qary_vec_to_dec, find_matrix_indices, decimal_banned, test_nmse
+from gfp_utils import read_fasta, select_aas, load_model, get_random_test_samples, qary_to_aa_encoding
+from gfast.utils import get_qs, save_data4, find_matrix_indices, test_nmse, calculate_samples
 from compute_samples import compute_scores
 
 
@@ -24,7 +22,6 @@ def parse_args():
     parser.add_argument("--n", nargs='+', type=int, required=True)
     parser.add_argument("--b", nargs='+', type=int, required=True)
     parser.add_argument("--threshold", type=float, required=True)
-    # parser.add_argument("--num_repeat", type=int, required=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -37,7 +34,7 @@ if __name__ == "__main__":
     bs = args.b
     noise_sd = args.threshold
     t = 3
-    num_repeat = 20#int(args.num_repeat)
+    num_repeat = 20
     delays_method_source = "identity"
     delays_method_channel = "nr"
     hyperparam = True
@@ -45,7 +42,6 @@ if __name__ == "__main__":
     # Select the AAs that are above the threshold
     threshold = args.threshold
     banned_indices = select_aas(sequence, threshold, model_weights)
-    #print(banned_indices)
 
 
 
@@ -209,8 +205,7 @@ if __name__ == "__main__":
         print('GFast')
         qs = get_qs(q, n, banned_indices_n)
         print(qs)
-        delta = 1
-        for b1 in range(1, b+1): 
+        for b1 in range(1, b+1):
             for d in range(5, num_repeat+1):
                 # Generate indices for sampling
                 num_subsample = n//b1
@@ -260,7 +255,7 @@ if __name__ == "__main__":
                     "--banned_indices_path", f"{base_dir}/banned_indices_n.pkl",
                     "--delays_method_source", delays_method_source,
                     "--delays_method_channel", delays_method_channel,
-                    "--hyperparam", str(hyperparam)
+                    "--hyperparam", str(hyperparam),
                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
                 captured_output = []
